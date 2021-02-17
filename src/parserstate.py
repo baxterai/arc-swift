@@ -8,11 +8,11 @@ class ParserState:
     def __init__(self, sentence, transsys=None, goldrels=None):
         self.stack = [0]
         # sentences should already have a <ROOT> symbol as the first token
-        self.buf = [i+1 for i in xrange(len(sentence)-1)]
+        self.buf = [i+1 for i in range(len(sentence)-1)]
         # head and relation labels
-        self.head = [[-1, -1] for _ in xrange(len(sentence))]
+        self.head = [[-1, -1] for _ in range(len(sentence))]
 
-        self.pos = [-1 for _ in xrange(len(sentence))]
+        self.pos = [-1 for _ in range(len(sentence))]
 
         self.goldrels = goldrels
 

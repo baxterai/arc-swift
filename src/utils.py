@@ -1,7 +1,8 @@
 import logging
 import os.path as op
 from smart_open import smart_open
-import cPickle as pickle
+#import cPickle as pickle
+import pickle
 from parserstate import ParserState
 from transition import ArcSwift, ArcEagerReduce, ArcEagerShift, ArcStandard, ArcHybrid
 import numpy as np
@@ -20,9 +21,9 @@ def transsys_lookup(k):
 
 def process_example(conll_lines, seq_lines, vocab, mappings, transsys, fpos=False, log=None):
     if fpos:
-        res = [[] for _ in xrange(4)]
+        res = [[] for _ in range(4)]
     else:
-        res = [[] for _ in xrange(3)]
+        res = [[] for _ in range(3)]
     res[0] = [vocab[u'<ROOT>']] + [vocab[u'<UNK>'] if line.split()[1] not in vocab else vocab[line.split()[1]] for line in conll_lines]
     for line in seq_lines:
         line = line.split()
@@ -63,7 +64,7 @@ def read_data(conll_file, seq_file, vocab, mappings, transsys, fpos=False, log=N
                 lines2 = []
 
                 while True:
-                    line1 = conllf.readline().decode('utf-8')
+                    line1 = conllf.readline()
 
                     while line1:
                         line1_ = line1.strip()
@@ -72,9 +73,9 @@ def read_data(conll_file, seq_file, vocab, mappings, transsys, fpos=False, log=N
                             break
 
                         lines1 += [line1_]
-                        line1 = conllf.readline().decode('utf-8')
+                        line1 = conllf.readline()
 
-                    line2 = seqf.readline().decode('utf-8')
+                    line2 = seqf.readline()
 
                     while line2:
                         line2_ = line2.strip()
@@ -83,7 +84,7 @@ def read_data(conll_file, seq_file, vocab, mappings, transsys, fpos=False, log=N
                             break
 
                         lines2 += [line2_]
-                        line2 = seqf.readline().decode('utf-8')
+                        line2 = seqf.readline()
 
                     if not line1 or not line2:
                         break
@@ -101,7 +102,7 @@ def read_data(conll_file, seq_file, vocab, mappings, transsys, fpos=False, log=N
         else:
             lines1 = []
             while True:
-                line1 = conllf.readline().decode('utf-8')
+                line1 = conllf.readline()
 
                 while line1:
                     line1_ = line1.strip()
@@ -110,7 +111,7 @@ def read_data(conll_file, seq_file, vocab, mappings, transsys, fpos=False, log=N
                         break
 
                     lines1 += [line1_]
-                    line1 = conllf.readline().decode('utf-8')
+                    line1 = conllf.readline()
 
                 if not line1:
                     break
@@ -147,7 +148,7 @@ def read_vocab(conll_file, wordvec_file, vocab_file, wordvec_dim, min_count=3, l
         with smart_open(wordvec_file, 'r') as f:
             for line in f:
                 try:
-                    line = line.decode('utf-8').strip().split()
+                    line = line.strip().split()
                 except UnicodeDecodeError:
                     continue
                 word = " ".join(line[0:(len(line) - wordvec_dim)])
@@ -424,8 +425,8 @@ def read_gold_parserstates(fin, transsys, fpos=False):
     def processlines(lines):
         arcs = [dict() for i in range(len(lines)+1)]
 
-        pos = ["" for i in xrange(len(lines)+1)]
-        fpos = ["" for i in xrange(len(lines)+1)]
+        pos = ["" for i in range(len(lines)+1)]
+        fpos = ["" for i in range(len(lines)+1)]
 
         for i, line in enumerate(lines):
             pos[i+1] = line[3] # fine-grained
@@ -443,7 +444,7 @@ def read_gold_parserstates(fin, transsys, fpos=False):
     res = []
 
     lines = []
-    line = fin.readline().decode('utf-8')
+    line = fin.readline()
     while line:
         line = line.strip().split()
 
@@ -453,7 +454,7 @@ def read_gold_parserstates(fin, transsys, fpos=False):
         else:
             lines += [line]
 
-        line = fin.readline().decode('utf-8')
+        line = fin.readline()
 
     if len(lines) > 0:
         res += [processlines(lines)]
