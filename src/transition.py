@@ -439,10 +439,11 @@ class ArcEagerShift(ArcEagerReduce):
 class ArcStandard(TransitionSystem):
     @classmethod
     def actions_list(self):
-        return ['Shift', 'Left-Arc', 'Right-Arc']
+        return ['Shift', 'Swap','Left-Arc', 'Right-Arc']
 
     def _preparetransitionset(self, parserstate):
         SHIFT = self.mappings['action']['Shift']
+        SWAP = self.mappings['action']['Swap']
         LEFTARC = self.mappings['action']['Left-Arc']
         RIGHTARC = self.mappings['action']['Right-Arc']
 
@@ -453,7 +454,10 @@ class ArcStandard(TransitionSystem):
         if len(buf) > 0:
             t += [(SHIFT,)]
 
-        if len(stack) > 2:
+        if len(stack) > 1:
+            t += [(SWAP,)]
+
+        if len(stack) > 1:
             t += [(LEFTARC,)]
 
         if len(stack) > 1:
@@ -463,6 +467,7 @@ class ArcStandard(TransitionSystem):
 
     def advance(self, parserstate, action):
         SHIFT = self.mappings['action']['Shift']
+        SWAP = self.mappings['action']['Swap']
         LEFTARC = self.mappings['action']['Left-Arc']
         RIGHTARC = self.mappings['action']['Right-Arc']
 
@@ -481,6 +486,9 @@ class ArcStandard(TransitionSystem):
         if a[0] == SHIFT:
             parserstate.stack = [buf[0]] + stack
             parserstate.buf = buf[1:]
+        elif a[0] == SWAP:
+            parserstate.stack = [stack[0]] + stack[2:]
+            parserstate.buf = [stack[1]] + buf
         elif a[0] == LEFTARC:
             parserstate.head[stack[1]] = [stack[0], rel]
             parserstate.stack = [stack[0]] + stack[2:]
@@ -492,6 +500,7 @@ class ArcStandard(TransitionSystem):
 
     def goldtransition(self, parserstate, goldrels=None):
         SHIFT = self.mappings['action']['Shift']
+        SWAP = self.mappings['action']['Swap']
         LEFTARC = self.mappings['action']['Left-Arc']
         RIGHTARC = self.mappings['action']['Right-Arc']
 
@@ -499,28 +508,49 @@ class ArcStandard(TransitionSystem):
         stack = parserstate.stack
         buf = parserstate.buf
         head = parserstate.head
-
+        proj_order = parserstate.proj_order
         POS = len(self.mappings['pos'])
+
+
+        if len(stack) < 2 and len(buf) > 0:
+            return (SHIFT,-1)
 
         stack0_done = True
         for x in buf:
             if x in goldrels[stack[0]]:
                 stack0_done = False
                 break
+        for y in stack:
+            if y in goldrels[stack[0]]:
+                stack0_done=False
+                break
 
-        if len(stack) > 2 and stack[1] in goldrels[stack[0]]:
+        stack1_done=True
+        for x in buf:
+            if x in goldrels[stack[1]]:
+                stack1_done=False
+                break
+        for y in stack:
+           if y in goldrels[stack[1]]:
+                stack1_done=False
+                break
+
+        if stack[1] in goldrels[stack[0]] and stack1_done:
             rel = goldrels[stack[0]][stack[1]]
-            a = (LEFTARC, rel)
-        elif len(stack) > 1 and stack[0] in goldrels[stack[1]] and stack0_done:
+            return (LEFTARC, rel)
+        elif stack[0] in goldrels[stack[1]] and stack0_done:
             rel = goldrels[stack[1]][stack[0]]
-            a = (RIGHTARC, rel)
+            return (RIGHTARC, rel)
         else:
-            a = (SHIFT, -1)
+            if stack[1] < stack[0] and proj_order[stack[0]] < proj_order[stack[1]]:
+                return (SWAP, -1)
+            else:
+                return (SHIFT, -1)
 
-        return a
 
     def trans_to_str(self, t, state, pos, fpos=None):
         SHIFT = self.mappings['action']['Shift']
+        SWAP = self.mappings['action']['Swap']
         LEFTARC = self.mappings['action']['Left-Arc']
         RIGHTARC = self.mappings['action']['Right-Arc']
         if t[0] == SHIFT:
@@ -528,6 +558,8 @@ class ArcStandard(TransitionSystem):
                 return "Shift\t%s" % (pos[state.buf[0]])
             else:
                 return "Shift\t%s\t%s" % (pos[state.buf[0]], fpos[state.buf[0]])
+        elif t[0] == SWAP:
+            return "Swap\t"
         elif t[0] == LEFTARC:
             return "Left-Arc\t%s" % (self.invmappings['rel'][t[1]])
         elif t[0] == RIGHTARC:
@@ -539,6 +571,8 @@ class ArcStandard(TransitionSystem):
             fields = { 'action':line[0], 'rel':line[1] }
         elif line[0] == 'Right-Arc':
             fields = { 'action':line[0], 'rel':line[1] }
+        elif line[0] == 'Swap':
+            fields = { 'action':line[0], 'pos':None }
         elif line[0] == 'Shift':
             fields = { 'action':line[0], 'pos':line[1] }
             if len(line) > 2:
@@ -549,6 +583,7 @@ class ArcStandard(TransitionSystem):
 
     def tuple_trans_to_int(self, cand, t):
         SHIFT = self.mappings['action']['Shift']
+        SWAP = self.mappings['action']['Swap']
         LEFTARC = self.mappings['action']['Left-Arc']
         RIGHTARC = self.mappings['action']['Right-Arc']
 
@@ -558,6 +593,10 @@ class ArcStandard(TransitionSystem):
         if t[0] == SHIFT:
             return base
 
+        base += 1
+
+        if t[0] == SWAP:
+            return base
         base += 1
 
         if t[0] == LEFTARC:
@@ -570,6 +609,7 @@ class ArcStandard(TransitionSystem):
 
     def tuple_trans_from_int(self, cand, action):
         SHIFT = self.mappings['action']['Shift']
+        SWAP = self.mappings['action']['Swap']
         LEFTARC = self.mappings['action']['Left-Arc']
         RIGHTARC = self.mappings['action']['Right-Arc']
         RELS = len(self.mappings['rel'])
@@ -578,6 +618,11 @@ class ArcStandard(TransitionSystem):
         base = 0
         if action == base:
             a = (SHIFT,)
+        base += 1
+
+        if action == base:
+            a = (SWAP,)
+
         base += 1
 
         if base <= action < base + RELS:
